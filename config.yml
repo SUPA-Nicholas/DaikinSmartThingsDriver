@@ -1,0 +1,5 @@
+name: "DAIKIN Thermostat"
+packageKey: "DAIKIN-Thermostat"
+permissions:
+  lan: {}
+  discovery: {}
