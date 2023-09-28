@@ -19,6 +19,10 @@ local driver = Driver(
             caps.refresh()
         },
         capability_handlers = {
+            [caps.switch.ID] = {
+                [caps.switch.commands.on.NAME] = commands.power,
+                [caps.switch.commands.off.NAME] = commands.power
+            },
             [caps.thermostatMode.ID] = {
                 [caps.thermostatMode.commands.setThermostatMode.NAME] = commands.mode
             },
@@ -34,6 +38,10 @@ local driver = Driver(
         }
     }
 )
+
+function driver:power(device, pow)
+    return device:emit_event(caps.switch.switch(pow))
+end
 
 function driver:mode(device, mode)
     return device:emit_event(caps.thermostatMode.thermostatMode(mode))

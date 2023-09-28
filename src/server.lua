@@ -15,7 +15,9 @@ function hub_server.start(driver)
         local body = json.decode(req:get_body())
         
         local device = driver:get_device_info(body.uuid)
-        if body.mode then
+        if body.switch then
+            driver:power(device, body.switch)
+        elseif body.mode then
             driver:mode(device, body.mode)
         elseif body.heatingSetpoint then
             driver:heatingSetpoint(device, tonumber(body.heatingSetpoint))

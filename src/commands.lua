@@ -64,19 +64,22 @@ function command_handler.refresh(_, device)
 
         device:online()
 
-        log.trace("Refreshing Mode")
-        if status.pow == "0" then
-            device:emit_event(caps.thermostatMode.thermostatMode("off"))
+        log.trace("Refreshing Power")
+        if status.pow == "1" then
+            device:emit_event(caps.switch.switch("on"))
         else
-            if status.mode == "0" then
-                device:emit_event(caps.thermostatMode.thermostatMode("fanonly"))
-            elseif status.mode == "1" then
-                device:emit_event(caps.thermostatMode.thermostatMode("heat"))
-            elseif status.mode == "2" then
-                device:emit_event(caps.thermostatMode.thermostatMode("cool"))
-            elseif status.mode == "7" then
-                device:emit_event(caps.thermostatMode.thermostatMode("dryair"))
-            end
+            device:emit_event(caps.switch.switch("off"))
+        end
+        
+        log.trace("Refreshing Mode")
+        if status.mode == "0" then
+            device:emit_event(caps.thermostatMode.thermostatMode("fanonly"))
+        elseif status.mode == "1" then
+            device:emit_event(caps.thermostatMode.thermostatMode("heat"))
+        elseif status.mode == "2" then
+            device:emit_event(caps.thermostatMode.thermostatMode("cool"))
+        elseif status.mode == "7" then
+            device:emit_event(caps.thermostatMode.thermostatMode("dryair"))
         end
 
         log.trace("Refreshing Heating Setpoint")
@@ -91,36 +94,54 @@ function command_handler.refresh(_, device)
     end
 end
 
--- mode changing function
-function command_handler.mode(_, device, command)
-    local pow, mode
-
-    if command.args.mode == "off" then
-        pow = "0"
-    else
+-- power control function
+function command_handler.power(_, device, command)
+    local pow
+    
+    if command.command == "on" then
         pow = "1"
-        if command.args.mode == "fanonly" then
-            mode = "0"
-        elseif command.args.mode == "heat" then
-            mode = "1"
-        elseif command.args.mode == "cool" then
-            mode = "2"
-        elseif command.args.mode == "dryair" then
-            mode = "7"
-        end
+    else
+        pow = "0"
     end
 
     local get_success, raw = command_handler.send_lan_command(device, nil)
     if get_success then
         local status = response_handler(raw)
         status.pow = pow
-        if pow == "1" then
-            status.mode = mode
-            if mode == "1" then
-                status.stemp = status.dt1
-            elseif mode == "2" then
-                status.stemp = status.dt2
-            end
+        local send_success = command_handler.send_lan_command(
+            device,
+            status)
+        if send_success then
+            return device:emit_event(caps.switch.switch(command.command))
+        else
+            log.error("pow setting fail")
+        end
+    else
+        log.error("get current status fail, pow setting fail")
+    end
+end
+
+-- mode changing function
+function command_handler.mode(_, device, command)
+    local mode
+
+    if command.args.mode == "fanonly" then
+        mode = "0"
+    elseif command.args.mode == "heat" then
+        mode = "1"
+    elseif command.args.mode == "cool" then
+        mode = "2"
+    elseif command.args.mode == "dryair" then
+        mode = "7"
+    end
+
+    local get_success, raw = command_handler.send_lan_command(device, nil)
+    if get_success then
+        local status = response_handler(raw)
+        if mode == "1" then
+            status.stemp = status.dt1
+        elseif mode == "2" then
+            status.stemp = status.dt2
         end
         local send_success = command_handler.send_lan_command(
             device,
