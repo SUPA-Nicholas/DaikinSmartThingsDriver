@@ -138,6 +138,7 @@ function command_handler.mode(_, device, command)
     local get_success, raw = command_handler.send_lan_command(device, nil)
     if get_success then
         local status = response_handler(raw)
+        status.mode = mode
         if mode == "1" then
             status.stemp = status.dt1
         elseif mode == "2" then
