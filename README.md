@@ -4,7 +4,8 @@ SmartThings Edge Driver for DAIKIN thermostat
 The driver is built based on the DAIKIN thermonstat WiFi module BRP15B61.
 
 The driver provide the following control:
-- Mode switch between off, heat, cool, fan and dry
+- on/off control
+- Mode switch between heat, cool, fan and dry
 - Heating setpoint between 16 - 31 degree celsius
 - Cooling setpoint between 17 - 32 degree celsius
 
