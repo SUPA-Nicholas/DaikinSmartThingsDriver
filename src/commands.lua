@@ -67,19 +67,19 @@ function command_handler.refresh(_, device)
         log.trace("Refreshing Power")
         if status.pow == "1" then
             device:emit_event(caps.switch.switch("on"))
+            log.trace("Refreshing Mode")
+            if status.mode == "0" then
+                device:emit_event(caps.thermostatMode.thermostatMode("fanonly"))
+            elseif status.mode == "1" then
+                device:emit_event(caps.thermostatMode.thermostatMode("heat"))
+            elseif status.mode == "2" then
+                device:emit_event(caps.thermostatMode.thermostatMode("cool"))
+            elseif status.mode == "7" then
+                device:emit_event(caps.thermostatMode.thermostatMode("dryair"))
+            end
         else
             device:emit_event(caps.switch.switch("off"))
-        end
-        
-        log.trace("Refreshing Mode")
-        if status.mode == "0" then
-            device:emit_event(caps.thermostatMode.thermostatMode("fanonly"))
-        elseif status.mode == "1" then
-            device:emit_event(caps.thermostatMode.thermostatMode("heat"))
-        elseif status.mode == "2" then
-            device:emit_event(caps.thermostatMode.thermostatMode("cool"))
-        elseif status.mode == "7" then
-            device:emit_event(caps.thermostatMode.thermostatMode("dryair"))
+            device:emit_event(caps.thermostatMode.thermostatMode("off"))
         end
 
         log.trace("Refreshing Heating Setpoint")
@@ -108,10 +108,20 @@ function command_handler.power(_, device, command)
     if get_success then
         local status = response_handler(raw)
         status.pow = pow
+        if status.pow == "1" then
+            if status.stemp == status.dt1 then
+                status.mode = "1"
+            else
+                status.mode = "2"
+            end
+        end
         local send_success = command_handler.send_lan_command(
             device,
             status)
         if send_success then
+            if status.pow == "0" then
+                device:emit_event(caps.thermostatMode.thermostatMode("off"))
+            end
             return device:emit_event(caps.switch.switch(command.command))
         else
             log.error("pow setting fail")
@@ -123,21 +133,28 @@ end
 
 -- mode changing function
 function command_handler.mode(_, device, command)
-    local mode
+    local pow, mode
 
-    if command.args.mode == "fanonly" then
+    if command.args.mode == "off" then
+        pow = "0"
+    elseif command.args.mode == "fanonly" then
+        pow = "1"
         mode = "0"
     elseif command.args.mode == "heat" then
+        pow = "1"
         mode = "1"
     elseif command.args.mode == "cool" then
+        pow = "1"
         mode = "2"
     elseif command.args.mode == "dryair" then
+        pow = "1"
         mode = "7"
     end
 
     local get_success, raw = command_handler.send_lan_command(device, nil)
     if get_success then
         local status = response_handler(raw)
+        status.pow = pow
         status.mode = mode
         if mode == "1" then
             status.stemp = status.dt1
@@ -148,13 +165,20 @@ function command_handler.mode(_, device, command)
             device,
             status)
         if send_success then
-            if status.mode == "0" then
+            if status.pow == "0" then
+                device:emit_event(caps.switch.switch("off"))
+                return device:emit_event(caps.thermostatMode.thermostatMode("off"))
+            elseif status.mode == "0" then
+                device:emit_event(caps.switch.switch("on"))
                 return device:emit_event(caps.thermostatMode.thermostatMode("fanonly"))
             elseif status.mode == "1" then
+                device:emit_event(caps.switch.switch("on"))
                 return device:emit_event(caps.thermostatMode.thermostatMode("heat"))
             elseif status.mode == "2" then
+                device:emit_event(caps.switch.switch("on"))
                 return device:emit_event(caps.thermostatMode.thermostatMode("cool"))
             elseif status.mode == "7" then
+                device:emit_event(caps.switch.switch("on"))
                 return device:emit_event(caps.thermostatMode.thermostatMode("dryair"))
             end
         else
